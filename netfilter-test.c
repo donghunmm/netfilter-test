@@ -31,7 +31,7 @@ static u_int32_t extract_packet_info(struct nfq_data *tb, unsigned char **data) 
     return id;
 }
 
-int is_malicious_site(unsigned char* data, const char *host_to_block) {
+int blocked_site(unsigned char* data, const char *host_to_block) {
     unsigned char *http_data = data + ((data[0] & 0x0F) * 4) + ((data[20] & 0xF0) >> 4) * 4;
     const char *ptr = strstr((const char *) http_data, "Host: ");
     
@@ -51,7 +51,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *
 
     printf("entering callback\n");
 
-    if (is_malicious_site(packet_data, (const char *) data)) {
+    if (blocked_site(packet_data, (const char *) data)) {
         printf("Blocking access to host: %s\n", (const char *) data);
         return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
     }
@@ -106,6 +106,7 @@ int main(int argc, char **argv) {
 
     fd = nfq_fd(h);
 
+    printf("Starting packet processing...\n");
     for (;;) {
         rv = recv(fd, buf, sizeof(buf), 0);
         if (rv >= 0) {
